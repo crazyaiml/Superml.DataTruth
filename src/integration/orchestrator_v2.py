@@ -11,7 +11,8 @@ Key improvements:
 import time
 import hashlib
 import sqlparse
-from typing import List, Dict, Any, Optional, Tuple
+from sqlparse import sql, tokens as T
+from typing import List, Dict, Any, Optional, Tuple, Set
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -28,6 +29,8 @@ from src.optimization.analyzer import get_query_analyzer
 from src.analytics.time_intelligence import get_time_intelligence
 from src.analytics.statistics import get_statistical_analyzer
 from src.analytics.anomaly import get_anomaly_detector, AnomalyMethod
+from src.user.authorization import UserContext, get_authorization_validator, Permission
+from src.user.rls_engine import RLSEngine
 
 
 class ErrorType(str, Enum):
@@ -52,10 +55,12 @@ class QueryError(BaseModel):
 class QueryRequest(BaseModel):
     """Request for query execution."""
     question: str = Field(description="Natural language question")
+    user_context: UserContext = Field(description="User context for authorization and RLS")
     pagination: Optional[PaginationParams] = Field(default=None, description="Pagination parameters")
     enable_analytics: bool = Field(default=True, description="Enable analytics features")
     enable_caching: bool = Field(default=True, description="Enable result caching")
     enable_debug: bool = Field(default=False, description="Include debug info in errors")
+    enable_rls: bool = Field(default=True, description="Enable row-level security")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
 
 
@@ -89,13 +94,15 @@ class ImprovedQueryOrchestrator:
         enable_plan_cache: bool = True,
         enable_result_cache: bool = True,
         enable_analytics: bool = True,
-        validation_level: ValidationLevel = ValidationLevel.MODERATE
+        validation_level: ValidationLevel = ValidationLevel.MODERATE,
+        enable_rls: bool = True
     ):
         """Initialize orchestrator."""
         self.enable_plan_cache = enable_plan_cache
         self.enable_result_cache = enable_result_cache
         self.enable_analytics = enable_analytics
         self.validation_level = validation_level
+        self.enable_rls = enable_rls
         
         # Initialize components
         self.semantic_loader = get_semantic_loader()
@@ -105,6 +112,10 @@ class ImprovedQueryOrchestrator:
         
         # SQL validator will be initialized with semantic context during execution
         self.sql_validator = None
+        
+        # Authorization and RLS
+        self.authorization_validator = get_authorization_validator()
+        self.rls_engine = RLSEngine(enable_audit=True) if enable_rls else None
         
         # Optimization components
         if self.enable_plan_cache:
@@ -137,9 +148,21 @@ class ImprovedQueryOrchestrator:
         timings = {}
         
         try:
-            # Stage 1: Load semantic context
+            # Stage 0: Authorization check
             stage_start = time.time()
-            semantic_context = self._load_semantic_context()
+            allowed, error_msg = self.authorization_validator.validate_query_permission(request.user_context)
+            if not allowed:
+                raise self._create_error(
+                    ErrorType.VALIDATION_ERROR,
+                    "authorization",
+                    error_msg,
+                    {"user_id": request.user_context.user_id} if request.enable_debug else None
+                )
+            timings["authorization"] = time.time() - stage_start
+            
+            # Stage 1: Load semantic context (filtered by user permissions)
+            stage_start = time.time()
+            semantic_context = self._load_semantic_context(request.user_context)
             timings["semantic_context"] = time.time() - stage_start
             
             # Stage 2: Get query plan (with caching)
@@ -182,6 +205,16 @@ class ImprovedQueryOrchestrator:
             
             validation_result = self.sql_validator.validate(sql)
             
+            # Validate table/column authorization
+            auth_errors = self._validate_sql_authorization(sql, request.user_context)
+            if auth_errors:
+                raise self._create_error(
+                    ErrorType.VALIDATION_ERROR,
+                    "sql_authorization",
+                    f"Authorization failed: {', '.join(auth_errors)}",
+                    {"sql": sql, "errors": auth_errors} if request.enable_debug else None
+                )
+            
             if not validation_result.is_valid:
                 error_messages = [f"{err.code}: {err.message}" for err in validation_result.errors]
                 raise self._create_error(
@@ -203,6 +236,26 @@ class ImprovedQueryOrchestrator:
                 ]
             
             timings["sql_validation"] = time.time() - stage_start
+            
+            # Stage 5.5: Apply RLS (Row-Level Security)
+            if self.enable_rls and request.enable_rls and self.rls_engine:
+                stage_start = time.time()
+                rls_result = self.rls_engine.inject_rls(sql, request.user_context)
+                sql = rls_result.rewritten_sql  # Use RLS-protected SQL
+                
+                metadata['rls_applied'] = True
+                metadata['rls_filters_count'] = len(rls_result.injected_filters)
+                metadata['rls_tables_affected'] = rls_result.tables_affected
+                
+                if request.enable_debug:
+                    metadata['rls_details'] = {
+                        'original_sql': rls_result.original_sql,
+                        'injected_filters': rls_result.injected_filters
+                    }
+                
+                timings["rls_injection"] = time.time() - stage_start
+            else:
+                metadata['rls_applied'] = False
             
             # Stage 6: Execute query (FULL result set - no pagination yet)
             stage_start = time.time()
@@ -340,12 +393,38 @@ class ImprovedQueryOrchestrator:
         content = f"{timestamp}:{question}"
         return hashlib.sha256(content.encode()).hexdigest()[:16]
     
-    def _load_semantic_context(self) -> Dict[str, Any]:
-        """Load semantic layer context."""
+    def _load_semantic_context(self, user_context: UserContext) -> Dict[str, Any]:
+        """
+        Load semantic layer context filtered by user permissions.
+        
+        Only returns metrics/dimensions the user can access.
+        """
+        # Load full context
+        all_metrics = self.semantic_loader.get_all_metrics()
+        all_dimensions = self.semantic_loader.get_all_dimensions()
+        all_synonyms = self.semantic_loader.get_all_synonyms()
+        
+        # Filter by user permissions
+        filtered_metrics = []
+        for metric in all_metrics:
+            metric_name = metric.get('name', '') if isinstance(metric, dict) else getattr(metric, 'name', '')
+            if user_context.can_access_metric(metric_name):
+                filtered_metrics.append(metric)
+        
+        filtered_dimensions = []
+        for dimension in all_dimensions:
+            dim_name = dimension.get('name', '') if isinstance(dimension, dict) else getattr(dimension, 'name', '')
+            # Dimensions typically tied to tables/columns
+            if isinstance(dimension, dict) and 'table' in dimension:
+                if user_context.can_access_table(dimension['table']):
+                    filtered_dimensions.append(dimension)
+            else:
+                filtered_dimensions.append(dimension)
+        
         return {
-            "metrics": self.semantic_loader.get_all_metrics(),
-            "dimensions": self.semantic_loader.get_all_dimensions(),
-            "synonyms": self.semantic_loader.get_all_synonyms()
+            "metrics": filtered_metrics,
+            "dimensions": filtered_dimensions,
+            "synonyms": all_synonyms  # Synonyms are not sensitive
         }
     
     async def _get_query_plan(
@@ -452,6 +531,71 @@ class ImprovedQueryOrchestrator:
                 f"Failed to generate SQL: {str(e)}",
                 {"plan": query_plan.model_dump()}
             )
+    
+    def _validate_sql_authorization(
+        self,
+        sql: str,
+        user_context: UserContext
+    ) -> List[str]:
+        """
+        Validate user is authorized to access tables/columns in SQL.
+        
+        Returns list of authorization errors.
+        """
+        errors = []
+        
+        # Parse SQL to extract tables and columns
+        try:
+            parsed = sqlparse.parse(sql)
+            if not parsed:
+                return []
+            
+            statement = parsed[0]
+        except Exception:
+            return []  # Let SQL validator handle parse errors
+        
+        # Extract tables
+        tables = self._extract_table_names(statement)
+        
+        # Validate table access
+        for table in tables:
+            allowed, error_msg = self.authorization_validator.validate_table_access(
+                user_context,
+                table,
+                "query"
+            )
+            if not allowed:
+                errors.append(f"Table access denied: {table}")
+        
+        # Could also extract and validate column access here
+        # For now, table-level validation is sufficient
+        
+        return errors
+    
+    def _extract_table_names(self, statement: sql.Statement) -> Set[str]:
+        """Extract table names from SQL statement."""
+        tables = set()
+        
+        from_seen = False
+        join_seen = False
+        
+        for token in statement.tokens:
+            if token.ttype is T.Keyword and token.value.upper() == 'FROM':
+                from_seen = True
+            elif token.ttype is T.Keyword and 'JOIN' in token.value.upper():
+                join_seen = True
+            elif (from_seen or join_seen) and isinstance(token, sql.Identifier):
+                table_name = token.get_real_name()
+                if table_name:
+                    tables.add(table_name.lower())
+                from_seen = False
+                join_seen = False
+            elif (from_seen or join_seen) and token.ttype is T.Name:
+                tables.add(token.value.lower())
+                from_seen = False
+                join_seen = False
+        
+        return tables
     
     async def _execute_query(
         self,
