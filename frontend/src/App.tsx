@@ -14,6 +14,7 @@ import PricingPage from './components/PricingPage'
 import CaseStudiesPage from './components/CaseStudiesPage'
 import TechnologyPage from './components/TechnologyPage'
 import RoadmapPage from './components/RoadmapPage'
+import RLSConfiguration from './components/RLSConfiguration'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { API_URL } from './config'
 
@@ -71,6 +72,7 @@ function AppContent() {
         <Route path="/settings" element={<SettingsScreen />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/security" element={<SecurityCompliancePage />} />
+        <Route path="/rls-config" element={<RLSConfiguration />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/case-studies" element={<CaseStudiesPage />} />
         <Route path="/technology" element={<TechnologyPage />} />

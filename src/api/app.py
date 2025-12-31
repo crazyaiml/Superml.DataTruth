@@ -21,6 +21,8 @@ initialize_config()
 from src.api.routes import router
 from src.api.vector_routes import router as vector_router
 from src.api.setup import router as setup_router, is_setup_complete
+from src.user.rls_config_api import router as rls_router
+from src.api.rls_query_example import router as rls_query_router
 from src.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -76,6 +78,8 @@ def create_app() -> FastAPI:
     app.include_router(setup_router, prefix="/api/setup", tags=["Setup"])
     app.include_router(router, prefix="/api/v1")
     app.include_router(vector_router)  # Already has /api/v1/vector prefix
+    app.include_router(rls_router)  # RLS configuration endpoints
+    app.include_router(rls_query_router)  # RLS query example endpoints
 
     # Global exception handler
     @app.exception_handler(Exception)
