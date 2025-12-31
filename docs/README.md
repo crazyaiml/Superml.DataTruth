@@ -44,6 +44,7 @@ Welcome to DataTruth—the AI-powered analytics platform that transforms how you
 
 **Technical Documentation**
 - [System Architecture](ARCHITECTURE.md) - Complete system architecture and technical design
+- [REST API Reference](API.md) - Complete API documentation with examples
 - [Vector Database](VECTOR_DB_IMPLEMENTATION.md) - Semantic search architecture
 - [User Activity Tracking](USER_ACTIVITY_TRACKING.md) - Analytics and monitoring
 - [Security Architecture](SECURITY.md) - Security implementation details
