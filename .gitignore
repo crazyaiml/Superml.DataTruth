@@ -32,6 +32,10 @@ build/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
+data/.env.production
+data/setup.json
 
 # Database
 *.db
