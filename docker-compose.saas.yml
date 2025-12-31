@@ -1,0 +1,143 @@
+# DataTruth - SaaS Deployment
+# Simple one-command deployment with web-based setup wizard
+# No manual configuration required - everything is done through the UI
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: datatruth-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - datatruth-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: datatruth-redis
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - datatruth-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: datatruth-api
+    environment:
+      # These will be overwritten by setup wizard
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Database connection (default to docker network)
+      INTERNAL_DB_HOST: ${INTERNAL_DB_HOST:-postgres}
+      INTERNAL_DB_PORT: ${INTERNAL_DB_PORT:-5432}
+      INTERNAL_DB_NAME: ${INTERNAL_DB_NAME:-datatruth_internal}
+      INTERNAL_DB_USER: ${INTERNAL_DB_USER:-postgres}
+      INTERNAL_DB_PASSWORD: ${INTERNAL_DB_PASSWORD:-postgres}
+      INTERNAL_DB_ADMIN_USER: ${INTERNAL_DB_ADMIN_USER:-postgres}
+      INTERNAL_DB_ADMIN_PASSWORD: ${INTERNAL_DB_ADMIN_PASSWORD:-postgres}
+      
+      # API settings
+      API_PORT: 8000
+      API_WORKERS: ${API_WORKERS:-4}
+      
+      # CORS (will be updated by setup)
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8000}
+      
+      # OpenAI (will be set by setup wizard or from .env file)
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./database:/app/database
+    ports:
+      - "8000:8000"
+    networks:
+      - datatruth-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: datatruth-frontend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    networks:
+      - datatruth-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: datatruth-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - datatruth-network
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+    profiles:
+      - production
+
+networks:
+  datatruth-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
