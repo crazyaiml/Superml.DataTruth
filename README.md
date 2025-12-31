@@ -1,351 +1,287 @@
-# SuperML DataTruth
+# DataTruth - AI-Powered Analytics SaaS Platform
 
-**Governed natural-language analytics over PostgreSQL with AI-powered data quality**
+**Transform your data into insights with natural language queries**
 
-Ask questions in plain English. Get answers from verified data — not guesses.
+DataTruth is an enterprise-grade analytics platform that enables anyone to query databases using plain English. No SQL knowledge required—just ask questions and get instant, accurate answers with beautiful visualizations.
 
----
-
-## 🎉 **NEW: SaaS Deployment Mode**
-
-Deploy DataTruth as a complete SaaS product with **web-based setup wizard**!
-
-```bash
-# One command deployment
-./deploy-saas.sh
-
-# Important Commands
-# View logs
-docker-compose -f docker-compose.saas.yml logs -f
-
-# Stop services
-docker-compose -f docker-compose.saas.yml stop
-
-# Restart services
-docker-compose -f docker-compose.saas.yml restart
-
-# Check service status
-docker-compose -f docker-compose.saas.yml ps
-
-# Open http://localhost:3000
-# Configure through beautiful UI
-# No .env editing required!
-```
-
-**Features:**
-- ✅ Web-based configuration wizard
-- ✅ Real-time connection testing
-- ✅ One-command deployment
-- ✅ No manual setup needed
-- ✅ Production ready in 5 minutes
-
-📖 **[Full SaaS Deployment Guide →](SAAS_DEPLOYMENT.md)**
-
----
-
-## 📚 Documentation
-
-- **[SaaS Deployment](SAAS_DEPLOYMENT.md)** - Web-based setup wizard (NEW!)
-- **[Production Deployment](DEPLOYMENT.md)** - Traditional deployment guide
-- **[Security Guide](SECURITY.md)** - Security hardening checklist
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Get running in 5 minutes
-- **[Complete Guide](docs/COMPLETE_GUIDE.md)** - Full documentation
-- **[Database Schema](docs/database-schema.md)** - Database structure
+<p align="center">
+  <img src="docs/demo-img/LandingPage.png" alt="DataTruth Dashboard" width="800"/>
+</p>
 
 ---
 
 ## 🚀 Quick Start
 
-### Option 1: SaaS Mode (Recommended) 🆕
+Get started in under 5 minutes with our one-command deployment:
 
 ```bash
-# Deploy with Docker (no configuration needed!)
+# Deploy DataTruth SaaS platform
 ./deploy-saas.sh
 
-# Open browser at http://localhost:3000
-# Follow setup wizard to configure
+# Open http://localhost:3000
+# Complete the guided setup wizard
 ```
 
-### Option 2: Traditional Setup
+That's it! No configuration files, no manual database setup. Everything is done through our intuitive web interface.
 
+![Setup Wizard](docs/demo-img/Welcome-Setup.png)
+
+---
+
+## ✨ Why DataTruth?
+
+### 🎯 Built for Everyone
+- **Business Users**: Ask questions in plain English, no technical skills needed
+- **Analysts**: Get instant insights with AI-powered visualizations
+- **Data Teams**: Deploy once, enable your entire organization
+
+### 🔒 Enterprise-Ready
+- Role-based access control (Admin, Analyst, Executive, Developer)
+- Read-only database access—your data stays safe
+- Complete audit trail of all queries and user activities
+- SOC 2 compliant architecture
+
+### 🧠 Intelligent & Adaptive
+- AI learns your business terminology over time
+- Typo-tolerant search with fuzzy matching
+- Automatic data quality monitoring
+- Smart query suggestions based on your data
+
+### 📊 Beautiful Insights
+- Auto-generated charts and visualizations
+- Interactive dashboards with drill-down capabilities
+- Export to PDF, Excel, or share via link
+- Real-time data refresh
+
+---
+
+## 🎬 See It In Action
+
+### Natural Language Queries
+![Search and Ask](docs/demo-img/Search_Ask_with_LLM-Generated-Examples-to-query-client-db.png)
+
+### Real-time Chat Interface
+![Chat Interface](docs/demo-img/Query_Response_Chatbased-Realtime-query.png)
+
+### Role-Based Data Insights
+![Data Insights](docs/demo-img/RoleBase-DataInsights-Analyst.png)
+
+### Data Quality Monitoring
+![Quality Dashboard](docs/demo-img/Client-Data-Quality-Check-Statistics.png)
+
+---
+
+## 📚 Documentation
+
+- **[Getting Started Guide](docs/README.md)** - Complete setup and configuration
+- **[User Guide](docs/USER_MANAGEMENT.md)** - User roles and permissions
+- **[Feature Documentation](docs/)** - Detailed feature explanations
+- **[Security](docs/SECURITY.md)** - Security architecture and compliance
+- **[API Documentation](docs/API.md)** - REST API reference
+
+---
+
+## 🚀 Deployment Options
+
+### Cloud Deployment (Recommended)
 ```bash
-# One-time setup
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cd frontend && npm install && cd ..
-./setup-databases.sh
-
-# Start application
-./start.sh
+# Deploy to your preferred cloud provider
+./deploy-saas.sh --cloud aws|azure|gcp
 ```
 
-Open http://localhost:3000 and login with `admin/admin123`
+### Self-Hosted
+```bash
+# Deploy on your own infrastructure
+./deploy-saas.sh --self-hosted
+```
+
+### Docker Compose
+```bash
+# Quick local deployment
+docker-compose -f docker-compose.saas.yml up -d
+```
+
+📖 **[Full Deployment Guide →](docs/SAAS_DEPLOYMENT.md)**
 
 ---
 
-## Overview
+## 🎯 Key Features
 
-SuperML DataTruth is an AI-powered analytics platform that enables business users to query relational databases using natural language. Unlike generic LLM chatbots, DataTruth prioritizes:
+### For Business Users
+- **Natural Language Queries**: "Show me top 10 customers by revenue last quarter"
+- **Smart Suggestions**: AI recommends relevant queries based on your data
+- **Interactive Charts**: Automatic visualization with drill-down capabilities
+- **Export Anywhere**: PDF, Excel, CSV—share insights easily
 
-- ✅ **Data correctness** - No hallucinated numbers
-- 🔒 **Security** - Read-only, SQL injection-proof
-- 📊 **Governed metrics** - One version of truth
-- 🔍 **Explainability** - Every answer is auditable
-- 🎯 **Typo tolerance** - Fuzzy matching for user input
-- 📈 **Data quality** - Multi-dimensional quality assessment
-- 🔌 **Dynamic connections** - ThoughtSpot-like schema discovery
-
----
-
-## Key Features
-
-### Core Features
-- **Natural Language Queries**: "Top 10 agents by revenue last quarter"
+### For Data Teams
 - **Semantic Layer**: Define metrics once, use everywhere
-- **SQL Guardrails**: Prevent unsafe queries automatically
-- **Structured Planning**: LLM generates query plans, not raw SQL
-- **Audit Trail**: Every query is logged with full context
-- **Explainable Results**: See metric definitions and filters used
+- **Data Quality Monitoring**: 6-dimensional quality scoring (freshness, completeness, accuracy, consistency, validity, uniqueness)
+- **Fuzzy Matching**: Typo-tolerant search handles "revenu", "kalifornia", "tot sal"
+- **Complete Audit Trail**: Track every query, user action, and data access
 
-### Phase 2: AI-Powered Intelligence
-- **AI Synonym Learning**: Automatically learn user terminology
-- **Smart Search**: Fast semantic search across metrics and dimensions
-- **Feedback Loop**: Learn from user interactions and corrections
-- **Auto-learning**: Continuously improve based on usage patterns
-
-### Phase 3: Data Quality & Matching
-- **Data Quality Scoring**: 6-dimensional quality assessment (freshness, completeness, accuracy, consistency, validity, uniqueness)
-- **Fuzzy Matching**: Typo-tolerant search with 4 match types (exact, fuzzy, phonetic, abbreviation)
-- **Data Profiling**: Automatic pattern discovery and statistics
-- **Entity Matching**: Multi-source entity resolution with conflict detection
-
-### Phase 4: ThoughtSpot-like Features ✨
-- **Dynamic Connections**: Connect to any database (PostgreSQL, MySQL, Snowflake, etc.)
-- **Auto Schema Discovery**: Introspect tables, columns, and foreign key relationships
-- **Field Mapping**: Map technical field names to business-friendly names
-- **AI Field Descriptions**: Generate intelligent descriptions for any field
-- **Generalized Aggregations**: Define once how fields aggregate (revenue = sum(amount))
-- **Business Name Search**: Search using friendly names, not technical names
-- **Vector DB Integration**: ChromaDB for persistent semantic search and cross-database field discovery
-- **Continuous Learning**: Learned patterns survive restarts and improve over time
-
-📖 **[Full ThoughtSpot Features Guide →](THOUGHTSPOT_QUICKSTART.md)**
+### For IT & Security
+- **Read-Only Access**: Database connections are strictly read-only
+- **SQL Injection Prevention**: AI-generated queries validated and sandboxed
+- **Role-Based Access Control**: Admin, Analyst, Executive, Developer roles
+- **Activity Monitoring**: Real-time tracking of all user activities
+- **Compliance Ready**: Complete data lineage and audit logs
 
 ---
 
-## Architecture
+## 🏢 Use Cases
 
-```
-User Question (NL)
-    ↓
-Intent Extraction (LLM)
-    ↓
-Query Plan (JSON)
-    ↓
-SQL Generation (Template-based)
-    ↓
-SQL Validation (Guardrails)
-    ↓
-Execution (Read-only)
-    ↓
-Formatted Result + Explanation
-```
+### Sales Analytics
+"Show me the top performing sales reps this quarter with their conversion rates"
+
+### Customer Insights
+"Which customers have decreased their spending by more than 20% in the last 6 months?"
+
+### Financial Reporting
+"Calculate profit margin by product category for each region"
+
+### Operations
+"Show me average delivery time by carrier and identify outliers"
 
 ---
 
-## Quick Start
+## 🛠️ Technology Stack
 
-### Prerequisites
+- **Backend**: Python FastAPI with async support
+- **Database**: PostgreSQL with vector extensions
+- **AI/ML**: OpenAI GPT-4, ChromaDB for semantic search
+- **Frontend**: React with TypeScript, TailwindCSS
+- **Infrastructure**: Docker, Nginx, Redis
+- **Security**: JWT authentication, rate limiting, SQL guardrails
 
-- Python 3.11+
-- Docker & Docker Compose
-- OpenAI API key (or Azure OpenAI)
+---
 
-### Setup
+## 📊 Enterprise Features
+
+### User Management
+![User Management](docs/demo-img/Admin-User-Management.png)
+
+Comprehensive user administration with:
+- Multiple authentication methods (email/password, SSO)
+- Granular role assignments
+- Activity tracking and analytics
+- Bulk user operations
+
+### Connection Management
+![Connection Manager](docs/demo-img/Admin-Connection-Manager-for-ClientDB.png)
+
+Connect to any database:
+- PostgreSQL, MySQL, Snowflake, BigQuery
+- Auto schema discovery
+- Connection testing and validation
+- Secure credential storage
+
+### Semantic Layer
+![Semantic Layer](docs/demo-img/SemanticLayer-for-adding-calculated-data-metrics.png)
+
+Define business metrics once:
+- Calculated metrics and KPIs
+- Business-friendly field names
+- Cross-database field mapping
+- AI-generated descriptions
+
+---
+
+## 🔒 Security & Compliance
+
+DataTruth implements enterprise-grade security:
+
+✅ **Data Protection**
+- Encryption at rest and in transit
+- Read-only database connections
+- No data stored outside your infrastructure
+
+✅ **Access Control**
+- Multi-factor authentication (MFA)
+- Role-based permissions
+- IP allowlisting
+- Session management
+
+✅ **Audit & Compliance**
+- Complete query audit trail
+- User activity logging
+- Data access monitoring
+- SOC 2 compliance ready
+
+📖 **[Full Security Documentation →](docs/SECURITY.md)**
+
+---
+
+## 🚦 Getting Help
+
+### Documentation
+- [User Guide](docs/USER_MANAGEMENT.md) - Learn how to use DataTruth
+- [Admin Guide](docs/SAAS_DEPLOYMENT.md) - Platform administration
+- [API Reference](docs/API.md) - Integration documentation
+
+### Support
+- 📧 Email: support@datatruth.ai
+- 💬 Community: [Discord](https://discord.gg/datatruth)
+- 📝 Issues: [GitHub Issues](https://github.com/yourusername/datatruth/issues)
+
+---
+
+## 📈 Roadmap
+
+### Q1 2025
+- ✅ SaaS deployment mode
+- ✅ Web-based setup wizard
+- ✅ Role-based access control
+- ✅ Data quality monitoring
+
+### Q2 2025
+- 🔄 Advanced visualizations (geographic maps, sankey diagrams)
+- 🔄 Scheduled reports and alerts
+- 🔄 Slack/Teams integration
+- 🔄 Custom dashboards
+
+### Q3 2025
+- 📅 Snowflake and BigQuery connectors
+- 📅 dbt integration
+- 📅 Advanced ML predictions
+- 📅 Mobile app (iOS/Android)
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ```bash
-# Clone the repository
-git clone <repo-url>
-cd Superml.DataTruth
+# Fork the repository
+# Create a feature branch
+git checkout -b feature/amazing-feature
 
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -e ".[dev]"
-
-# Set up pre-commit hooks
-pre-commit install
-
-# Start PostgreSQL
-docker-compose up -d postgres
-
-# Set environment variables
-cp .env.example .env
-# Edit .env with your OpenAI API key and database credentials
-
-# Run migrations/seed data
-docker-compose exec postgres psql -U datatruth_admin -d datatruth -f /docker-entrypoint-initdb.d/01-schema.sql
-
-# Run the application
-uvicorn src.api.app:app --reload
-```
-
-### Test the API
-
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Ask a question
-curl -X POST http://localhost:8000/chat \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Top 10 agents by revenue last quarter"}'
-```
-
----
-
-## Project Status
-
-**Current Phase:** Phase 3 Complete ✅
-
-- ✅ **Phase 1:** Agentic Semantic Layer - Core query engine
-- ✅ **Phase 2:** AI Synonyms & Auto-learning - Intelligent search
-- ✅ **Phase 3:** Data Quality & Matching - Quality monitoring and fuzzy search
-- 🚧 **Phase 4:** Snowflake Integration & dbt Support (Planned)
-
-See [ROADMAP.md](ROADMAP.md) for detailed planning.
-
----
-
-## Quick Demos
-
-### Run Phase 3 Demo (Data Quality & Matching)
-
-```bash
-# Start the server
-./start.sh
-### Query Assistant
-```
-✅ "Top 10 agents by revenue last quarter"
-✅ "Company-wise revenue and profit for 2024"
-✅ "Last 5-year revenue growth with YoY and CAGR"
-✅ "Revenue trend by month for Acme Corp"
-✅ "Profit margin by agent and region"
-```
-
-### Fuzzy Matching Examples
-```
-✅ "revenu" → matches "revenue" (typo tolerance)
-✅ "prof" → matches "profit" (abbreviation)
-✅ "kalifornia" → matches "California" (phonetic)
-✅ "tot rev" → matches "total revenue" (multi-word)
-- ✅ Data quality assessment with 6 dimensions
-- ✅ Fuzzy matching with typo tolerance
-- ✅ Abbreviation expansion (rev → revenue)
-- ✅ Dimension value matching
-- ✅ Correction suggestions
-- ✅ Data profiling
-
-### Access the Web UI
-
-```bash
-# Start both backend and frontend
-./start.sh
-
-# Access at http://localhost:5173
-# Try these features:
-#   - Query Assistant: Ask natural language questions
-#   - Data Quality: Monitor data quality metrics
-#   - Fuzzy Matching: Test typo-tolerant matching
-```
-
----
-
-## Documentation
-
-- [Architecture](docs/architecture.md) - System design and data flow
-- [Semantic Layer](docs/semantic-layer.md) - Metrics and dimension definitions
-- [API Reference](docs/api.md) - Endpoint documentation
-- [Security](docs/security.md) - Threat model and guardrails
-- [Developer Guide](docs/developer-guide.md) - Setup and contribution guide
-
----
-
-## Example Questions
-
-```
-✅ "Top 10 agents by revenue last quarter"
-✅ "Company-wise revenue and profit for 2024"
-✅ "Last 5-year revenue growth with YoY and CAGR"
-✅ "Revenue trend by month for Acme Corp"
-✅ "Profit margin by agent and region"
-```
-
----
-
-## Testing
-
-```bash
-# Run all tests
+# Make your changes and test
 pytest
 
-# Run with coverage
-pytest --cov=src --cov-report=html
-
-# Run specific test suite
-pytest tests/unit/
-pytest tests/integration/
-pytest tests/security/
-
-# Run golden test suite (30+ regression tests)
-pytest tests/golden/
+# Submit a pull request
 ```
 
 ---
 
-## Security
+## 📄 License
 
-DataTruth implements multiple security layers:
-
-1. **Read-only database user** - No write permissions
-2. **SQL allowlist** - Only SELECT/WITH allowed
-3. **Query timeouts** - 30s maximum execution
-4. **Row limits** - 10k max rows per query
-5. **Tenant isolation** - Automatic filter enforcement
-6. **No multi-statement** - Prevents SQL injection
-
-See [docs/security.md](docs/security.md) for details.
+DataTruth is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-## Contributing
+## 🙏 Acknowledgments
 
-1. Create a feature branch
-2. Make changes with tests
-3. Run `pytest` and ensure all tests pass
-4. Run `pre-commit run --all-files`
-5. Submit a pull request
-
----
-
-## License
-
-MIT License - See [LICENSE](LICENSE) file for details.
+Built with amazing open-source technologies:
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
+- [React](https://react.dev/) - UI framework
+- [PostgreSQL](https://www.postgresql.org/) - World's most advanced open source database
+- [OpenAI](https://openai.com/) - AI language models
+- [ChromaDB](https://www.trychroma.com/) - Vector database
 
 ---
 
-## Support
-
-For questions or issues, please open a GitHub issue or contact the SuperML team.
-
----
-
-## Acknowledgments
-
-Built with:
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [PostgreSQL](https://www.postgresql.org/)
-- [OpenAI](https://openai.com/)
-- [sqlparse](https://github.com/andialbrecht/sqlparse)
+<p align="center">
+  <strong>Ready to transform your data into insights?</strong><br/>
+  <a href="docs/SAAS_DEPLOYMENT.md">Get Started →</a>
+</p>
