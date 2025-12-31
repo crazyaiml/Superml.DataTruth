@@ -586,7 +586,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-gray-200 text-center text-gray-600 text-sm">
-            <p>© 2025 DataTruth. All rights reserved.</p>
+            <p>© 2025 DataTruth by SuperML.dev. All rights reserved.</p>
           </div>
         </div>
       </div>

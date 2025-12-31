@@ -20,7 +20,7 @@ from src.semantic.loader import get_semantic_loader
 from src.planner.intent_extractor import IntentExtractor
 from src.planner.query_plan import QueryPlan
 from src.sql.builder import SQLBuilder
-from src.sql.validator import SQLValidator
+from src.sql.validator_v2 import ProductionSQLValidator, ValidationLevel
 from src.database.executor import get_query_executor
 from src.optimization.pagination import PaginationParams, paginate_results
 from src.optimization.plan_cache import get_plan_cache
@@ -88,19 +88,23 @@ class ImprovedQueryOrchestrator:
         self,
         enable_plan_cache: bool = True,
         enable_result_cache: bool = True,
-        enable_analytics: bool = True
+        enable_analytics: bool = True,
+        validation_level: ValidationLevel = ValidationLevel.MODERATE
     ):
         """Initialize orchestrator."""
         self.enable_plan_cache = enable_plan_cache
         self.enable_result_cache = enable_result_cache
         self.enable_analytics = enable_analytics
+        self.validation_level = validation_level
         
         # Initialize components
         self.semantic_loader = get_semantic_loader()
         self.intent_extractor = IntentExtractor()
         self.sql_builder = SQLBuilder()
-        self.sql_validator = SQLValidator()
         self.query_executor = get_query_executor()
+        
+        # SQL validator will be initialized with semantic context during execution
+        self.sql_validator = None
         
         # Optimization components
         if self.enable_plan_cache:
@@ -166,24 +170,38 @@ class ImprovedQueryOrchestrator:
             
             # Stage 5: Validate SQL (string + AST)
             stage_start = time.time()
-            sql_errors = self.sql_validator.validate(sql)
-            if sql_errors:
-                raise self._create_error(
-                    ErrorType.VALIDATION_ERROR,
-                    "sql_string_validation",
-                    f"SQL validation failed: {sql_errors}",
-                    {"sql": sql, "errors": sql_errors} if request.enable_debug else None
+            
+            # Initialize validator with semantic context
+            if not self.sql_validator:
+                self.sql_validator = ProductionSQLValidator(
+                    semantic_context=semantic_context,
+                    validation_level=self.validation_level,
+                    max_row_limit=10000,
+                    require_limit=True
                 )
             
-            # AST validation
-            ast_valid, ast_errors = self._validate_sql_ast(sql, semantic_context)
-            if not ast_valid:
+            validation_result = self.sql_validator.validate(sql)
+            
+            if not validation_result.is_valid:
+                error_messages = [f"{err.code}: {err.message}" for err in validation_result.errors]
                 raise self._create_error(
                     ErrorType.VALIDATION_ERROR,
-                    "sql_ast_validation",
-                    f"SQL AST validation failed: {', '.join(ast_errors)}",
-                    {"sql": sql, "ast_errors": ast_errors} if request.enable_debug else None
+                    "sql_validation",
+                    f"SQL validation failed: {', '.join(error_messages)}",
+                    {
+                        "sql": sql,
+                        "errors": [err.dict() for err in validation_result.errors],
+                        "warnings": [w.dict() for w in validation_result.warnings],
+                        "metadata": validation_result.metadata
+                    } if request.enable_debug else None
                 )
+            
+            # Add warnings to metadata for monitoring
+            if validation_result.warnings:
+                metadata['sql_warnings'] = [
+                    f"{w.code}: {w.message}" for w in validation_result.warnings
+                ]
+            
             timings["sql_validation"] = time.time() - stage_start
             
             # Stage 6: Execute query (FULL result set - no pagination yet)
@@ -434,56 +452,6 @@ class ImprovedQueryOrchestrator:
                 f"Failed to generate SQL: {str(e)}",
                 {"plan": query_plan.model_dump()}
             )
-    
-    def _validate_sql_ast(
-        self,
-        sql: str,
-        semantic_context: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
-        """
-        Validate SQL using AST parsing.
-        
-        Checks:
-        - SQL syntax is valid
-        - SELECT statement structure
-        - No dangerous operations (DROP, DELETE without WHERE, etc.)
-        - Column references are valid
-        """
-        errors = []
-        
-        try:
-            # Parse SQL
-            parsed = sqlparse.parse(sql)
-            if not parsed:
-                return False, ["Failed to parse SQL"]
-            
-            statement = parsed[0]
-            
-            # Check statement type
-            stmt_type = statement.get_type()
-            if stmt_type != 'SELECT':
-                errors.append(f"Only SELECT statements allowed, got {stmt_type}")
-            
-            # Check for dangerous keywords
-            dangerous_keywords = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE']
-            sql_upper = sql.upper()
-            for keyword in dangerous_keywords:
-                if keyword in sql_upper:
-                    errors.append(f"Dangerous keyword detected: {keyword}")
-            
-            # Check for DELETE/UPDATE without WHERE
-            if 'DELETE' in sql_upper and 'WHERE' not in sql_upper:
-                errors.append("DELETE without WHERE clause")
-            if 'UPDATE' in sql_upper and 'WHERE' not in sql_upper:
-                errors.append("UPDATE without WHERE clause")
-            
-            # Additional structural checks could go here
-            # (e.g., verify column names, check JOIN conditions, etc.)
-            
-        except Exception as e:
-            return False, [f"AST parsing error: {str(e)}"]
-        
-        return len(errors) == 0, errors
     
     async def _execute_query(
         self,

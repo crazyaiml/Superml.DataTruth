@@ -9,6 +9,7 @@ import time
 import hashlib
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+from enum import Enum
 from pydantic import BaseModel, Field
 
 from src.semantic.loader import get_semantic_loader
@@ -25,22 +26,44 @@ from src.analytics.statistics import get_statistical_analyzer
 from src.analytics.anomaly import get_anomaly_detector, AnomalyMethod
 
 
+class ErrorType(str, Enum):
+    """Error types for query execution."""
+    VALIDATION_ERROR = "validation_error"
+    PLAN_ERROR = "plan_error"
+    SQL_GENERATION_ERROR = "sql_generation_error"
+    EXECUTION_ERROR = "execution_error"
+    LLM_ERROR = "llm_error"
+    ANALYTICS_ERROR = "analytics_error"
+    UNKNOWN_ERROR = "unknown_error"
+
+
 class QueryRequest(BaseModel):
     """Request for query execution."""
     question: str = Field(description="Natural language question")
     pagination: Optional[PaginationParams] = Field(default=None, description="Pagination parameters")
     enable_analytics: bool = Field(default=True, description="Enable analytics features")
     enable_caching: bool = Field(default=True, description="Enable result caching")
+    enable_debug: bool = Field(default=False, description="Enable debug information")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context")
+
+
+class QueryError(BaseModel):
+    """Error information for failed queries."""
+    type: ErrorType = Field(description="Error type")
+    message: str = Field(description="Error message")
+    stage: str = Field(description="Pipeline stage where error occurred")
+    debug_info: Optional[Dict[str, Any]] = Field(default=None, description="Debug information (when enabled)")
 
 
 class QueryResponse(BaseModel):
     """Response from query execution."""
     request_id: str = Field(description="Unique request identifier")
     question: str = Field(description="Original question")
-    query_plan: Optional[Dict[str, Any]] = Field(description="Generated query plan")
-    sql: str = Field(description="Generated SQL")
-    results: List[Dict[str, Any]] = Field(description="Query results")
+    success: bool = Field(description="Whether query succeeded")
+    error: Optional[QueryError] = Field(default=None, description="Error information if failed")
+    query_plan: Optional[Dict[str, Any]] = Field(default=None, description="Generated query plan")
+    sql: str = Field(default="", description="Generated SQL")
+    results: List[Dict[str, Any]] = Field(default_factory=list, description="Query results")
     pagination: Optional[Dict[str, Any]] = Field(default=None, description="Pagination metadata")
     analytics: Optional[Dict[str, Any]] = Field(default=None, description="Analytics insights")
     performance: Dict[str, Any] = Field(description="Performance metrics")
