@@ -1370,61 +1370,153 @@ Authorization: Bearer <token>
 
 ---
 
-## Webhooks
+## Usage Examples
 
-*Coming Soon*
-
-Configure webhooks to receive real-time notifications about events:
-
-- `query.completed` - Query execution completed
-- `insight.generated` - New insight generated
-- `alert.triggered` - Data quality alert triggered
-- `user.created` - New user created
-
----
-
-## SDKs
-
-### Python SDK
-
-```bash
-pip install datatruth-sdk
-```
+### Python with requests
 
 ```python
-from datatruth import DataTruthClient
+import requests
 
-client = DataTruthClient(api_key="your_api_key")
+class DataTruthClient:
+    def __init__(self, base_url="http://localhost:8000"):
+        self.base_url = base_url
+        self.token = None
+    
+    def login(self, username, password):
+        """Authenticate and get JWT token"""
+        response = requests.post(
+            f"{self.base_url}/api/auth/login",
+            json={"username": username, "password": password}
+        )
+        response.raise_for_status()
+        data = response.json()
+        self.token = data["access_token"]
+        return data
+    
+    def _headers(self):
+        """Get authorization headers"""
+        if not self.token:
+            raise ValueError("Not authenticated. Call login() first.")
+        return {"Authorization": f"Bearer {self.token}"}
+    
+    def query(self, question, **kwargs):
+        """Execute a natural language query"""
+        response = requests.post(
+            f"{self.base_url}/api/query",
+            headers=self._headers(),
+            json={"question": question, **kwargs}
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def get_metrics(self):
+        """Get all available metrics"""
+        response = requests.get(
+            f"{self.base_url}/api/semantic/metrics",
+            headers=self._headers()
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def get_connections(self):
+        """Get all database connections"""
+        response = requests.get(
+            f"{self.base_url}/api/connections",
+            headers=self._headers()
+        )
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+client = DataTruthClient()
+client.login("admin", "admin123")
 
 # Execute query
 result = client.query("Show me revenue by month")
-print(result.results)
+print(f"Found {len(result['results'])} results")
+for row in result['results']:
+    print(row)
 
 # Get metrics
-metrics = client.semantic.get_metrics()
+metrics = client.get_metrics()
+print(f"Available metrics: {len(metrics['metrics'])}")
 ```
 
-### JavaScript/TypeScript SDK
-
-```bash
-npm install @datatruth/sdk
-```
+### JavaScript/TypeScript with fetch
 
 ```javascript
-import { DataTruthClient } from '@datatruth/sdk';
+class DataTruthClient {
+  constructor(baseUrl = 'http://localhost:8000') {
+    this.baseUrl = baseUrl;
+    this.token = null;
+  }
 
-const client = new DataTruthClient({ apiKey: 'your_api_key' });
+  async login(username, password) {
+    const response = await fetch(`${this.baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Login failed: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    this.token = data.access_token;
+    return data;
+  }
 
-// Execute query
-const result = await client.query("Show me revenue by month");
+  async query(question, options = {}) {
+    const response = await fetch(`${this.baseUrl}/api/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.token}`
+      },
+      body: JSON.stringify({ question, ...options })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Query failed: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  }
+
+  async getMetrics() {
+    const response = await fetch(`${this.baseUrl}/api/semantic/metrics`, {
+      headers: { 'Authorization': `Bearer ${this.token}` }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get metrics: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  }
+}
+
+// Usage
+const client = new DataTruthClient();
+await client.login('admin', 'admin123');
+
+const result = await client.query('Show me revenue by month');
 console.log(result.results);
 ```
 
 ### cURL Examples
 
 ```bash
+# Login and get token
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+
+# Response: {"access_token":"eyJhbG...", "token_type":"bearer"}
+
 # Execute a query
-curl -X POST https://api.datatruth.ai/v1/api/query \
+curl -X POST http://localhost:8000/api/query \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1433,19 +1525,85 @@ curl -X POST https://api.datatruth.ai/v1/api/query \
   }'
 
 # Get metrics
-curl -X GET https://api.datatruth.ai/v1/api/semantic/metrics \
+curl -X GET http://localhost:8000/api/semantic/metrics \
   -H "Authorization: Bearer YOUR_TOKEN"
 
-# Create user
-curl -X POST https://api.datatruth.ai/v1/api/users \
+# Create user (Admin only)
+curl -X POST http://localhost:8000/api/users \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "jane.doe",
     "email": "jane@company.com",
+    "password": "SecurePass123!",
     "role": "analyst"
   }'
+
+# Get data quality scores
+curl -X GET "http://localhost:8000/api/quality?connection_id=conn_001&table=sales" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Test database connection
+curl -X POST http://localhost:8000/api/connections/test \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "postgresql",
+    "host": "localhost",
+    "port": 5432,
+    "database": "mydb",
+    "username": "user",
+    "password": "pass"
+  }'
 ```
+
+### Bash Script Example
+
+Complete example script for querying DataTruth:
+
+```bash
+#!/bin/bash
+
+BASE_URL="http://localhost:8000"
+USERNAME="admin"
+PASSWORD="admin123"
+
+# Login and extract token
+echo "Logging in..."
+RESPONSE=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}")
+
+TOKEN=$(echo $RESPONSE | jq -r '.access_token')
+
+if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+    echo "Login failed"
+    exit 1
+fi
+
+echo "Logged in successfully"
+
+# Execute query
+echo "Executing query..."
+curl -s -X POST "$BASE_URL/api/query" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"question":"Show me revenue by month"}' \
+  | jq '.results'
+```
+
+---
+
+## Webhooks
+
+*Coming Soon*
+
+Configure webhooks to receive real-time notifications about events:
+
+- `query.completed` - Query execution completed
+- `insight.generated` - New insight generated  
+- `alert.triggered` - Data quality alert triggered
+- `user.created` - New user created
 
 ---
 
